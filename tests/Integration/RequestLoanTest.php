@@ -5,10 +5,18 @@ namespace Tests\Integration;
 use Ramsey\Uuid\Uuid;
 use Src\Application\UseCase\GetLoan;
 use Src\Application\UseCase\RequestLoan;
+use Src\Infra\Database\PostgresConnection;
+use Src\Infra\Repository\InstallmentDatabaseRepository;
+use Src\Infra\Repository\LoanDatabaseRepository;
+use Src\Infra\Repository\Memory\InstallmentMemoryRepository;
+use Src\Infra\Repository\Memory\LoanMemoryRepository;
 
-test('Deve aplicar um financiamento utilizanodo a tabela price', function () {
+test('Deve aplicar um financiamento utilizando a tabela price', function () {
     $code = Uuid::uuid4()->toString();
-    $requestLoan = new RequestLoan();
+    $connection = new PostgresConnection();
+    $loanDatabaseRepository = new LoanMemoryRepository();
+    $installmentDatabaseRepository = new InstallmentMemoryRepository();
+    $requestLoan = new RequestLoan($loanDatabaseRepository, $installmentDatabaseRepository);
     $inputRequestLoan = (object) [
         'code' => $code,
         'purchasePrice' => 250000,
@@ -19,9 +27,10 @@ test('Deve aplicar um financiamento utilizanodo a tabela price', function () {
     ];
 
     $requestLoan->execute($inputRequestLoan);
-    $getLoan = new GetLoan();
+    $getLoan = new GetLoan($loanDatabaseRepository, $installmentDatabaseRepository);
     $inputGetLoan = (object) ['code' => $code];
     $output = $getLoan->execute($inputGetLoan);
+    $connection->close();
 
     expect($output->installments)->toHaveCount(12);
     $firstInstallment = $output->installments[0];
@@ -30,9 +39,12 @@ test('Deve aplicar um financiamento utilizanodo a tabela price', function () {
     expect($lastInstallment->balance)->toBe(0.0);
 });
 
-test('Deve aplicar um financiamento utilizanodo a tabela sac', function () {
+test('Deve aplicar um financiamento utilizando a tabela sac', function () {
     $code = Uuid::uuid4()->toString();
-    $requestLoan = new RequestLoan();
+    $connection = new PostgresConnection();
+    $loanDatabaseRepository = new LoanMemoryRepository();
+    $installmentDatabaseRepository = new InstallmentMemoryRepository();
+    $requestLoan = new RequestLoan($loanDatabaseRepository, $installmentDatabaseRepository);
     $inputRequestLoan = (object) [
         'code' => $code,
         'purchasePrice' => 250000,
@@ -43,9 +55,10 @@ test('Deve aplicar um financiamento utilizanodo a tabela sac', function () {
     ];
 
     $requestLoan->execute($inputRequestLoan);
-    $getLoan = new GetLoan();
+    $getLoan = new GetLoan($loanDatabaseRepository, $installmentDatabaseRepository);
     $inputGetLoan = (object) ['code' => $code];
     $output = $getLoan->execute($inputGetLoan);
+    $connection->close();
 
     expect($output->installments)->toHaveCount(12);
     $firstInstallment = $output->installments[0];

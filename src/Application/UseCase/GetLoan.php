@@ -1,44 +1,39 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Src\Application\UseCase;
+
+use Src\Application\Repository\InstallmentRepository;
+use Src\Application\Repository\LoanRepository;
+use Src\Domain\Entity\Installment;
 
 class GetLoan
 {
-    public function __construct()
-    {
-        // not implemented yet
+    public function __construct(
+        public readonly LoanRepository $loanRepository,
+        public readonly InstallmentRepository $installmentRepository
+    ) {
     }
 
     /**
      * Summary of execute
+     *
      * @param object{code:string} $input
-     * @return object{code:string, installments:object{installmentNumber:int,amount:float,interest:float,amortization:float,balance:float}[]}
+     * @return object{code:string, installments:object<Installment>[]}
      */
     public function execute(object $input): object
     {
-        $connection = new \PDO('pgsql:host=127.0.0.1;port=5432;dbname=postgres', 'postgres', '123456');
-
-        $sth = $connection->prepare('SELECT code, amount, period, rate, type FROM loan.loans WHERE code = ?');
-        $sth->execute([$input->code]);
-        $loanData = $sth->fetchAll(\PDO::FETCH_ASSOC)[0];
-
-        $sth = $connection->prepare('SELECT number, amount, interest, amortization, balance FROM loan.installments WHERE loan_code = ?');
-        $sth->execute([$input->code]);
-        $installmentsData = $sth->fetchAll(\PDO::FETCH_ASSOC);
-        $connection = null;
+        $loan = $this->loanRepository->getByCode($input->code);
+        $installments = $this->installmentRepository->getByCode($loan->code);
 
         $output = (object) [
-            'code' => $loanData['code'],
+            'code' => $loan->code,
             'installments' => [],
         ];
-        foreach($installmentsData as $installment) {
-            $output->installments[] = (object) [
-                'installmentNumber' => $installment['number'],
-                'amount' => (float) $installment['amount'],
-                'interest' => (float) $installment['interest'],
-                'amortization' => (float) $installment['amortization'],
-                'balance' => (float) $installment['balance'],
-            ];
+
+        foreach ($installments as $installment) {
+            $output->installments[] = $installment;
         }
 
         return $output;

@@ -25,7 +25,8 @@
         ],
         "test": "vendor/bin/pest",
         "lint": "vendor/bin/phpstan analyse src tests --level max",
-        "insights": "vendor/bin/phpinsights"
+        "insights": "vendor/bin/phpinsights",
+        "fix": "vendor/bin/phpinsights --fix"
     },
     "require": {
         "ramsey/uuid": "^4.7",

@@ -1,7 +1,8 @@
 <?php
 
-require_once __DIR__ . '/vendor/autoload.php';
+declare(strict_types=1);
 
+require_once __DIR__ . '/vendor/autoload.php';
 
 use Ramsey\Uuid\Uuid;
 use Src\Application\UseCase\SimulateLoan;
@@ -13,7 +14,7 @@ $input = (object) [
     'downPayment' => 50000,
     'salary' => 70000,
     'period' => 12,
-    'type' => 'sac'
+    'type' => 'sac',
 ];
 
 $output = $simulateLoan->execute($input);
@@ -23,7 +24,6 @@ $output = $simulateLoan->execute($input);
 // expect($firstInstallment->balance)->toBe(184230.24);
 [, $lastInstallment] = $output->installments;
 // expect($lastInstallment->balance)->toBe(0);
-
 
 echo '<table><head><tr><th>Installment</th><th>Amount</th><th>Interest</th><th>Amortization</th><th>Balance</th></tr></head><body>';
 foreach ($output->installments as $installment) {
