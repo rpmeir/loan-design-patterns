@@ -8,7 +8,8 @@ create table if not exists loan.loans (
     amount numeric,
     period integer,
     rate numeric,
-    type text
+    type text,
+    salary numeric
 );
 
 create table if not exists loan.installments (
