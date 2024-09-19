@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Src\Domain\Entity;
 
-class Loan
+abstract class AbstractLoan
 {
     private string $type;
 
@@ -29,4 +29,11 @@ class Loan
     {
         return $this->type;
     }
+
+    /**
+     * Summary of generateInstallments
+     *
+     * @return array<Installment>
+     */
+    abstract public function generateInstallments(): array;
 }

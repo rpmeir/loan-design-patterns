@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Src\Infra\Repository;
+namespace Src\Infra\Repository\Database;
 
 use Src\Application\Repository\InstallmentRepository;
 use Src\Domain\Entity\Installment;

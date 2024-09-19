@@ -4,23 +4,28 @@ declare(strict_types=1);
 
 namespace Src\Application\UseCase;
 
+use Src\Application\Factory\RepositoryAbstractFactory;
 use Src\Application\Repository\InstallmentRepository;
 use Src\Application\Repository\LoanRepository;
 use Src\Domain\Entity\Installment;
 
-class GetLoan
+class GetLoan implements UseCase
 {
-    public function __construct(
-        public readonly LoanRepository $loanRepository,
-        public readonly InstallmentRepository $installmentRepository
-    ) {
+    private LoanRepository $loanRepository;
+    private InstallmentRepository $installmentRepository;
+
+    public function __construct(public readonly RepositoryAbstractFactory $repositoryFactory)
+    {
+        $this->loanRepository = $this->repositoryFactory->createLoanRepository();
+        $this->installmentRepository = $this->repositoryFactory->createInstallmentRepository();
     }
 
     /**
      * Summary of execute
      *
      * @param object{code:string} $input
-     * @return object{code:string, installments:object<Installment>[]}
+     *
+     * @return object{code:string, installments:object<object<Installment>>}
      */
     public function execute(object $input): object
     {

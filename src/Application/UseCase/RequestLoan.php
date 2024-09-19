@@ -4,19 +4,21 @@ declare(strict_types=1);
 
 namespace Src\Application\UseCase;
 
-use Brick\Math\RoundingMode;
-use Brick\Money\Money;
+use Src\Application\Factory\RepositoryAbstractFactory;
 use Src\Application\Repository\InstallmentRepository;
 use Src\Application\Repository\LoanRepository;
-use Src\Domain\Entity\Installment;
 use Src\Domain\Entity\Loan;
+use Src\Domain\Factory\InstallmentGeneratorFactory;
 
-class RequestLoan
+class RequestLoan implements UseCase
 {
-    public function __construct(
-        public readonly LoanRepository $loanRepository,
-        public readonly InstallmentRepository $installmentRepository
-    ) {
+    private LoanRepository $loanRepository;
+    private InstallmentRepository $installmentRepository;
+
+    public function __construct(public readonly RepositoryAbstractFactory $repositoryFactory)
+    {
+        $this->loanRepository = $this->repositoryFactory->createLoanRepository();
+        $this->installmentRepository = $this->repositoryFactory->createInstallmentRepository();
     }
 
     /**
@@ -24,56 +26,21 @@ class RequestLoan
      *
      * @param object{code:string,purchasePrice:float,downPayment:float,salary:float,period:int,type:string} $input
      */
-    public function execute(object $input): void
+    public function execute(object $input): object
     {
         $loanAmount = $input->purchasePrice - $input->downPayment;
         $loanPeriod = $input->period;
         $loanRate = 1;
         $loanType = $input->type;
 
-        $loan = new Loan($input->code, $loanAmount, $loanPeriod, $loanRate, $loanType);
+        $loan = new Loan($input->code, $loanAmount, $loanPeriod, $loanRate, $loanType, $input->salary);
         $this->loanRepository->save($loan);
 
-        if ($input->salary * 0.25 < $loanAmount / $loanPeriod) {
-            throw new \InvalidArgumentException('Insufficient salary');
+        $generateInstallments = InstallmentGeneratorFactory::create($loanType);
+        $installments = $generateInstallments->generate($input->code, $loanAmount, $loanPeriod, $loanRate);
+        foreach ($installments as $installment) {
+            $this->installmentRepository->save($installment);
         }
-
-        $balance = Money::of($loanAmount, 'BRL');
-        $rate = $loanRate / 100;
-        $installmentNumber = 1;
-        if ($loanType === 'price') {
-            $formula = pow(1 + $rate, $loanPeriod);
-            $formulaRate = $formula * $rate;
-            $formulaMinusOne = $formula - 1;
-            $balanceFormula = $formulaRate / $formulaMinusOne;
-            $amount = $balance->multipliedBy($balanceFormula, RoundingMode::HALF_UP);
-            while ($balance->isGreaterThan(Money::of(0, 'BRL'))) {
-                $interest = $balance->multipliedBy($rate, RoundingMode::HALF_UP);
-                $amortization = $amount->minus($interest);
-                $balance = $balance->minus($amortization);
-                if ($balance->isLessThanOrEqualTo(Money::of(0.05, 'BRL'))) {
-                    $balance = Money::of(0, 'BRL');
-                }
-                $installment = new Installment($input->code, $installmentNumber, $amount->getAmount()->toFloat(), $interest->getAmount()->toFloat(), $amortization->getAmount()->toFloat(), $balance->getAmount()->toFloat());
-                $this->installmentRepository->save($installment);
-                $installmentNumber++;
-            }
-        }
-        if ($loanType === 'sac') {
-            $amortization = $balance->dividedBy($loanPeriod, RoundingMode::HALF_UP);
-            while ($balance->isGreaterThan(Money::of(0.0, 'BRL'))) {
-                $initialBalance = Money::of($balance->getAmount(), 'BRL');
-                $interest = Money::of($initialBalance->getAmount()->toFloat() * $rate, 'BRL', null, RoundingMode::HALF_UP);
-                $updatedBalance = Money::of($initialBalance->getAmount()->toFloat() + $interest->getAmount()->toFloat(), 'BRL');
-                $amount = Money::of($interest->getAmount()->toFloat() + $amortization->getAmount()->toFloat(), 'BRL');
-                $balance = Money::of($updatedBalance->getAmount()->toFloat() - $amount->getAmount()->toFloat(), 'BRL', null, RoundingMode::HALF_UP);
-                if ($balance->isLessThanOrEqualTo(Money::of(0.05, 'BRL'))) {
-                    $balance = Money::of(0, 'BRL');
-                }
-                $installment = new Installment($input->code, $installmentNumber, $amount->getAmount()->toFloat(), $interest->getAmount()->toFloat(), $amortization->getAmount()->toFloat(), $balance->getAmount()->toFloat());
-                $this->installmentRepository->save($installment);
-                $installmentNumber++;
-            }
-        }
+        return (object) [];
     }
 }

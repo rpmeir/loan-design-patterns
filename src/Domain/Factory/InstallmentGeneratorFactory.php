@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace Src\Domain\Factory;
 
 use Src\Domain\Entity\InstallmentGenerator;

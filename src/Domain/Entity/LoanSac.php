@@ -7,34 +7,28 @@ namespace Src\Domain\Entity;
 use Brick\Math\RoundingMode;
 use Brick\Money\Money;
 
-class InstallmentGeneratorSac implements InstallmentGenerator
+class LoanSac extends AbstractLoan
 {
-    public function generate(string $loanCode, float $loanAmount, int $loanPeriod, float $loanRate): array
+    public function generateInstallments(): array
     {
-        // step 1
         /** @var array<Installment> */
         $installments = [];
-        $balance = Money::of($loanAmount, 'BRL');
-        $rate = $loanRate / 100;
+        $balance = Money::of($this->amount, 'BRL');
+        $rate = $this->rate / 100;
         $installmentNumber = 1;
 
-        // step 2
-        $amortization = $balance->dividedBy($loanPeriod, RoundingMode::HALF_UP);
-
+        $amortization = $balance->dividedBy($this->period, RoundingMode::HALF_UP);
         while ($balance->isGreaterThan(Money::of(0.0, 'BRL'))) {
-            // step 3
             $initialBalance = Money::of($balance->getAmount(), 'BRL');
             $interest = Money::of($initialBalance->getAmount()->toFloat() * $rate, 'BRL', null, RoundingMode::HALF_UP);
             $updatedBalance = Money::of($initialBalance->getAmount()->toFloat() + $interest->getAmount()->toFloat(), 'BRL');
             $amount = Money::of($interest->getAmount()->toFloat() + $amortization->getAmount()->toFloat(), 'BRL');
             $balance = Money::of($updatedBalance->getAmount()->toFloat() - $amount->getAmount()->toFloat(), 'BRL', null, RoundingMode::HALF_UP);
-
-            // step 4
             if ($balance->isLessThanOrEqualTo(Money::of(0.05, 'BRL'))) {
                 $balance = Money::of(0, 'BRL');
             }
             $installments[] = new Installment(
-                $loanCode,
+                $this->code,
                 $installmentNumber,
                 $amount->getAmount()->toFloat(),
                 $interest->getAmount()->toFloat(),
@@ -43,6 +37,7 @@ class InstallmentGeneratorSac implements InstallmentGenerator
             );
             $installmentNumber++;
         }
+
         return $installments;
     }
 }
